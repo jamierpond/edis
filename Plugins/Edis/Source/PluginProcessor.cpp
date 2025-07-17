@@ -86,50 +86,45 @@ void EdisAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 {
     juce::ignoreUnused(midiMessages);
 
-    if (parameters.enable->get())
-    {
-        auto mainInputOutput = getBusBuffer(buffer, true, 0);
-        auto sideChainInput = getBusBuffer(buffer, true, 1);
-
-        auto amount = parameters.amount->get();
-
-        // parameter in ms
-        auto attack_s = parameters.attack->get() * 1e-3f;
-        auto release_s = parameters.release->get() * 1e-3f;
-
-        if (sideChainInput.getNumChannels() < 1)
-        {
-            return;
-        }
-
-         auto attack_alpha = pond::calculate_alpha_value(attack_s, fs);
-         auto release_alpha = pond::calculate_alpha_value(release_s, fs);
-
-        for (auto c = 0; c < mainInputOutput.getNumChannels(); ++c)
-        {
-            // for size_t
-            auto c_sz = static_cast<size_t>(c);
-            auto* channel = mainInputOutput.getWritePointer(c);
-            auto* sidechain = sideChainInput.getReadPointer(c);
-
-            for (auto i = 0; i < mainInputOutput.getNumSamples(); ++i) {
-
-                auto [y, smoothed_gain] = pond::rm_sidechain<float>({
-                    .channel = channel[i],
-                    .sidechain = sidechain[i],
-                    .amount = amount,
-                    .prev_smooth = prev_smoothed_gain[c_sz],
-                    .attack_alpha = attack_alpha,
-                    .release_alpha = release_alpha
-                });
-
-                prev_smoothed_gain[c_sz] = smoothed_gain;
-            }
-        }
+    if (parameters.enable->get()) {
+      return;
     }
-    else
-    {
-        buffer.clear();
+
+    auto mainInputOutput = getBusBuffer(buffer, true, 0);
+    auto sideChainInput = getBusBuffer(buffer, true, 1);
+
+    auto amount = parameters.amount->get();
+
+    // parameter in ms
+    auto attack_s = parameters.attack->get() * 1e-3f;
+    auto release_s = parameters.release->get() * 1e-3f;
+
+    if (sideChainInput.getNumChannels() < 1) {
+        return;
+    }
+
+     auto attack_alpha = pond::calculate_alpha_value(attack_s, fs);
+     auto release_alpha = pond::calculate_alpha_value(release_s, fs);
+
+    for (auto c = 0; c < mainInputOutput.getNumChannels(); ++c) {
+        // for size_t
+        auto c_sz = static_cast<size_t>(c);
+        auto* channel = mainInputOutput.getWritePointer(c);
+        auto* sidechain = sideChainInput.getReadPointer(c);
+
+        for (auto i = 0; i < mainInputOutput.getNumSamples(); ++i) {
+
+            auto [y, smoothed_gain] = pond::rm_sidechain<float>({
+                .channel = channel[i],
+                .sidechain = sidechain[i],
+                .amount = amount,
+                .prev_smooth = prev_smoothed_gain[c_sz],
+                .attack_alpha = attack_alpha,
+                .release_alpha = release_alpha
+            });
+
+            prev_smoothed_gain[c_sz] = smoothed_gain;
+        }
     }
 }
 
