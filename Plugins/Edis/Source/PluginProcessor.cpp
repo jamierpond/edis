@@ -37,6 +37,11 @@ void EdisAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         auto mainInputOutput = getBusBuffer(buffer, true, 0);
         auto sideChainInput = getBusBuffer(buffer, true, 1);
 
+        if (sideChainInput.getNumChannels() < 1)
+        {
+            return;
+        }
+
         for (int j = 0; j < mainInputOutput.getNumChannels(); ++j)
         {
             auto* channel = mainInputOutput.getWritePointer(j);
