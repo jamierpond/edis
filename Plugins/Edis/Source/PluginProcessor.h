@@ -2,10 +2,10 @@
 
 #include "Parameters.h"
 
-class NewPluginTemplateAudioProcessor : public PluginHelpers::ProcessorBase
+class EdisAudioProcessor : public PluginHelpers::ProcessorBase
 {
 public:
-    NewPluginTemplateAudioProcessor();
+    EdisAudioProcessor();
 
     void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;
 

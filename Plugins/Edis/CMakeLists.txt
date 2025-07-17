@@ -1,6 +1,6 @@
-project(NewPluginTemplate VERSION 0.0.1)
+project(Edis VERSION 0.0.1)
 
-set (BaseTargetName NewPluginTemplate)
+set (BaseTargetName Edis)
 
 juce_add_plugin("${BaseTargetName}"
         # VERSION ...                               # Set this if the plugin version is different to the project version

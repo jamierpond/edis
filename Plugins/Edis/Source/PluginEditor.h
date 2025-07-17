@@ -2,10 +2,10 @@
 
 #include "PluginProcessor.h"
 
-class NewPluginTemplateAudioProcessorEditor : public juce::AudioProcessorEditor
+class EdisAudioProcessorEditor : public juce::AudioProcessorEditor
 {
 public:
-    explicit NewPluginTemplateAudioProcessorEditor(NewPluginTemplateAudioProcessor&);
+    explicit EdisAudioProcessorEditor(EdisAudioProcessor&);
 
 private:
     void paint(juce::Graphics&) override;

@@ -1,12 +1,12 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
-NewPluginTemplateAudioProcessor::NewPluginTemplateAudioProcessor()
+EdisAudioProcessor::EdisAudioProcessor()
 {
     parameters.add(*this);
 }
 
-void NewPluginTemplateAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
+void EdisAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                                                    juce::MidiBuffer& midiMessages)
 
 {
@@ -18,12 +18,12 @@ void NewPluginTemplateAudioProcessor::processBlock(juce::AudioBuffer<float>& buf
         buffer.clear();
 }
 
-juce::AudioProcessorEditor* NewPluginTemplateAudioProcessor::createEditor()
+juce::AudioProcessorEditor* EdisAudioProcessor::createEditor()
 {
-    return new NewPluginTemplateAudioProcessorEditor(*this);
+    return new EdisAudioProcessorEditor(*this);
 }
 
-void NewPluginTemplateAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
+void EdisAudioProcessor::getStateInformation(juce::MemoryBlock& destData)
 {
     //Serializes your parameters, and any other potential data into an XML:
 
@@ -36,7 +36,7 @@ void NewPluginTemplateAudioProcessor::getStateInformation(juce::MemoryBlock& des
     copyXmlToBinary(*pluginPreset.createXml(), destData);
 }
 
-void NewPluginTemplateAudioProcessor::setStateInformation(const void* data,
+void EdisAudioProcessor::setStateInformation(const void* data,
                                                           int sizeInBytes)
 {
     //Loads your parameters, and any other potential data from an XML:
@@ -54,5 +54,5 @@ void NewPluginTemplateAudioProcessor::setStateInformation(const void* data,
 
 juce::AudioProcessor* JUCE_CALLTYPE createPluginFilter()
 {
-    return new NewPluginTemplateAudioProcessor();
+    return new EdisAudioProcessor();
 }
