@@ -25,6 +25,20 @@ constexpr static auto perform_one_pole(const T x, T alpha, const T prev_x) noexc
   return ((T{1.0} - alpha) * x) + alpha * prev_x;
 }
 
+template <typename T>
+constexpr static auto rescale(T x, T old_min, T old_max, T new_min, T new_max) noexcept {
+  if (old_min == old_max) {
+    return new_min; // Avoid division by zero
+  }
+  return new_min + (x - old_min) * (new_max - new_min) / (old_max - old_min);
+}
+
+template <typename T, T OldMin, T OldMax, T NewMin, T NewMax>
+constexpr static auto rescale(T x) noexcept {
+  return rescale(x, OldMin, OldMax, NewMin, NewMax);
+}
+
+
 
 } // namespace pond
 
@@ -59,21 +73,20 @@ void EdisAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
             return;
         }
 
-//         auto attack_alpha = pond::calculate_alpha_value(attack_s, fs);
-//         auto release_alpha = pond::calculate_alpha_value(release_s, fs);
+         auto attack_alpha = pond::calculate_alpha_value(attack_s, fs);
+         auto release_alpha = pond::calculate_alpha_value(release_s, fs);
 
         for (auto c = 0; c < mainInputOutput.getNumChannels(); ++c)
         {
             // for size_t
-//             auto c_sz = static_cast<size_t>(c);
+            auto c_sz = static_cast<size_t>(c);
             auto* channel = mainInputOutput.getWritePointer(c);
             auto* sidechain = sideChainInput.getReadPointer(c);
 
             for (auto i = 0; i < mainInputOutput.getNumSamples(); ++i)
             {
-                auto x = channel[i];
-                auto sc = sidechain[i];
-                auto nve_gain = -1.0f * pond::abs(sc);
+                auto gain = pond::abs(sidechain[i]) * amount;
+                auto rescaled_gain = 1.0f - pond::rescale(gain,-1.0f, 1.0f, 0.0f, 1.0f);
 
                 // smoothing
 //                 const auto prev_smooth = prev_smoothed_gain[c_sz];
@@ -81,7 +94,7 @@ void EdisAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 //                 const auto alpha = is_attacking ? attack_alpha : release_alpha;
 //                 const auto smoothed_gain = pond::perform_one_pole(nve_gain, alpha, prev_smooth);
 
-                auto ring_modded = x * nve_gain;
+                auto ring_modded = channel[i] * rescaled_gain;
                 channel[i] += ring_modded;
 
                 // re-save smoothed
