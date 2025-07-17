@@ -64,7 +64,7 @@ constexpr static auto rm_sidechain(const RingModArgs<T>& args) noexcept {
     auto alpha = is_attacking ? attack_alpha : release_alpha;
     auto smoothed_gain = pond::perform_one_pole(rescaled_gain, alpha, prev_smooth);
 
-    return std::make_pair(channel * rescaled_gain, smoothed_gain);
+    return smoothed_gain;
 }
 
 
@@ -114,7 +114,7 @@ void EdisAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
         for (auto i = 0; i < mainInputOutput.getNumSamples(); ++i) {
 
-            auto [y, smoothed_gain] = pond::rm_sidechain<float>({
+            auto gain = pond::rm_sidechain<float>({
                 .channel = channel[i],
                 .sidechain = sidechain[i],
                 .amount = amount,
@@ -123,8 +123,8 @@ void EdisAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                 .release_alpha = release_alpha
             });
 
-            channel[i] = y;
-            prev_smoothed_gain[c_sz] = smoothed_gain;
+            channel[i] *= gain;
+            prev_smoothed_gain[c_sz] = gain;
         }
     }
 }
