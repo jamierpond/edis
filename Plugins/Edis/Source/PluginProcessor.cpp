@@ -3,6 +3,18 @@
 
 namespace pond {
 
+
+ /** Used to @ref performOnePoleFilter of a value.
+* \f[
+* \alpha = e^{\frac{-log(9)}{f_s \cdot T}}
+* \f]
+* Where \f$ f_s \f$ is the sample rate, and \f$ T \f$ is the delay time.
+*/
+template <typename T>
+static inline T calculate_alpha_value(const T time_seconds, const T fs) noexcept {
+  return expf(-logf(9.0f) / (fs * time_seconds));
+}
+
 constexpr auto abs = [](auto x) {
   return x < 0 ? -x : x;
 };
@@ -13,11 +25,11 @@ constexpr static auto perform_one_pole(const T x, T alpha, const T prev_x) noexc
 }
 
 template<typename T>
-constexpr auto ring_mod_sidechain(T signal, T sidechain, T amount) {
+constexpr auto ring_mod_sidechain_gain(T sidechain, T amount) {
   // whenever the sidechain value is large we want to attenuate the signal
-  auto gain = T{1.0} - (pond::abs(sidechain) * amount);
-  return signal * gain;
+  return T{1.0} - (pond::abs(sidechain) * amount);
 }
+
 
 } // namespace pond
 
@@ -33,7 +45,6 @@ EdisAudioProcessor::EdisAudioProcessor()
 
 void EdisAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                                                    juce::MidiBuffer& midiMessages)
-
 {
     juce::ignoreUnused(midiMessages);
 
@@ -44,19 +55,34 @@ void EdisAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
         auto amount = parameters.amount->get();
 
+        // parameter in ms
+        auto attack_s = parameters.attack->get() * 1e-3f;
+        auto release_s = parameters.release->get() * 1e-3f;
+
         if (sideChainInput.getNumChannels() < 1)
         {
             return;
         }
 
-        for (int j = 0; j < mainInputOutput.getNumChannels(); ++j)
-        {
-            auto* channel = mainInputOutput.getWritePointer(j);
-            auto* sidechain = sideChainInput.getReadPointer(j);
+        auto attack_alpha = pond::calculate_alpha_value(attack_s, fs);
+        auto release_alpha = pond::calculate_alpha_value(release_s, fs);
 
-            for (int i = 0; i < mainInputOutput.getNumSamples(); ++i)
+        for (auto c = 0; c < mainInputOutput.getNumChannels(); ++c)
+        {
+            // for size_t
+            auto c_sz = static_cast<size_t>(c);
+            auto* channel = mainInputOutput.getWritePointer(c);
+            auto* sidechain = sideChainInput.getReadPointer(c);
+
+            for (auto i = 0; i < mainInputOutput.getNumSamples(); ++i)
             {
-                channel[i] = pond::ring_mod_sidechain(channel[i], sidechain[i], amount);
+                const auto gain = pond::ring_mod_sidechain_gain(sidechain[i], amount);
+                const auto prev_smooth = prev_smoothed_gain[c_sz];
+                const auto is_attacking = gain < prev_smooth;
+                const auto alpha = is_attacking ? attack_alpha : release_alpha;
+                const auto smoothed_gain = pond::perform_one_pole(gain, alpha, prev_smooth);
+                channel[i] *= smoothed_gain;
+                prev_smoothed_gain[c_sz] = smoothed_gain;
             }
         }
     }
