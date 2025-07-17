@@ -44,6 +44,31 @@ constexpr static auto rescale(T x) noexcept {
 }
 
 
+template <typename T>
+struct RingModArgs {
+  T channel;
+  T sidechain;
+  T amount;
+  T prev_smooth;
+  T attack_alpha;
+  T release_alpha;
+};
+
+template <typename T>
+constexpr static auto rm_sidechain(const RingModArgs<T>& args) noexcept {
+    auto [channel, sidechain, amount, prev_smooth, attack_alpha, release_alpha] = args;
+    auto gain = pond::abs(sidechain) * amount;
+
+    auto rescaled_gain = 1.0f - pond::rescale(gain,-1.0f, 1.0f, 0.0f, 1.0f);
+    auto is_attacking = rescaled_gain < prev_smooth;
+    auto alpha = is_attacking ? attack_alpha : release_alpha;
+    auto smoothed_gain = pond::perform_one_pole(rescaled_gain, alpha, prev_smooth);
+
+    return std::make_pair(channel * rescaled_gain, smoothed_gain);
+}
+
+
+
 } // namespace pond
 
 
@@ -87,21 +112,18 @@ void EdisAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
             auto* channel = mainInputOutput.getWritePointer(c);
             auto* sidechain = sideChainInput.getReadPointer(c);
 
-            for (auto i = 0; i < mainInputOutput.getNumSamples(); ++i)
-            {
-                auto gain = pond::abs(sidechain[i]) * amount;
-                auto rescaled_gain = 1.0f - pond::rescale(gain,-1.0f, 1.0f, 0.0f, 1.0f);
+            for (auto i = 0; i < mainInputOutput.getNumSamples(); ++i) {
 
-                // smoothing
-                const auto prev_smooth = prev_smoothed_gain[c_sz];
-                const auto is_attacking = rescaled_gain < prev_smooth;
-                const auto alpha = is_attacking ? attack_alpha : release_alpha;
-                const auto smoothed_gain = pond::perform_one_pole(rescaled_gain, alpha, prev_smooth);
+                auto [y, smoothed_gain] = pond::rm_sidechain<float>({
+                    .channel = channel[i],
+                    .sidechain = sidechain[i],
+                    .amount = amount,
+                    .prev_smooth = prev_smoothed_gain[c_sz],
+                    .attack_alpha = attack_alpha,
+                    .release_alpha = release_alpha
+                });
 
-                channel[i] *= rescaled_gain; // smoothed_gain;
-
-               // re-save smoothed
-               prev_smoothed_gain[c_sz] = smoothed_gain;
+                prev_smoothed_gain[c_sz] = smoothed_gain;
             }
         }
     }
