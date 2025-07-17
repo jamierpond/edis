@@ -86,7 +86,7 @@ void EdisAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 {
     juce::ignoreUnused(midiMessages);
 
-    if (parameters.enable->get()) {
+    if (!parameters.enable->get()) {
       return;
     }
 
