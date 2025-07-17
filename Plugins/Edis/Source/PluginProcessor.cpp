@@ -15,19 +15,14 @@ static inline T calculate_alpha_value(const T time_seconds, const T fs) noexcept
   return expf(-logf(9.0f) / (fs * time_seconds));
 }
 
-constexpr auto abs = [](auto x) {
-  return x < 0 ? -x : x;
-};
+template <typename T>
+constexpr auto abs(T x) {
+  return x < T{0} ? -x : x;
+}
 
 template <typename T>
 constexpr static auto perform_one_pole(const T x, T alpha, const T prev_x) noexcept {
   return ((T{1.0} - alpha) * x) + alpha * prev_x;
-}
-
-template<typename T>
-constexpr auto ring_mod_sidechain_gain(T sidechain, T amount) {
-  // whenever the sidechain value is large we want to attenuate the signal
-  return T{1.0} - (pond::abs(sidechain) * amount);
 }
 
 
@@ -64,25 +59,33 @@ void EdisAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
             return;
         }
 
-        auto attack_alpha = pond::calculate_alpha_value(attack_s, fs);
-        auto release_alpha = pond::calculate_alpha_value(release_s, fs);
+//         auto attack_alpha = pond::calculate_alpha_value(attack_s, fs);
+//         auto release_alpha = pond::calculate_alpha_value(release_s, fs);
 
         for (auto c = 0; c < mainInputOutput.getNumChannels(); ++c)
         {
             // for size_t
-            auto c_sz = static_cast<size_t>(c);
+//             auto c_sz = static_cast<size_t>(c);
             auto* channel = mainInputOutput.getWritePointer(c);
             auto* sidechain = sideChainInput.getReadPointer(c);
 
             for (auto i = 0; i < mainInputOutput.getNumSamples(); ++i)
             {
-                const auto gain = pond::ring_mod_sidechain_gain(sidechain[i], amount);
-                const auto prev_smooth = prev_smoothed_gain[c_sz];
-                const auto is_attacking = gain < prev_smooth;
-                const auto alpha = is_attacking ? attack_alpha : release_alpha;
-                const auto smoothed_gain = pond::perform_one_pole(gain, alpha, prev_smooth);
-                channel[i] *= smoothed_gain;
-                prev_smoothed_gain[c_sz] = smoothed_gain;
+                auto x = channel[i];
+                auto sc = sidechain[i];
+                auto nve_gain = -1.0f * pond::abs(sc);
+
+                // smoothing
+//                 const auto prev_smooth = prev_smoothed_gain[c_sz];
+//                 const auto is_attacking = nve_gain < prev_smooth;
+//                 const auto alpha = is_attacking ? attack_alpha : release_alpha;
+//                 const auto smoothed_gain = pond::perform_one_pole(nve_gain, alpha, prev_smooth);
+
+                auto ring_modded = x * nve_gain;
+                channel[i] += ring_modded;
+
+                // re-save smoothed
+                // prev_smoothed_gain[c_sz] = smoothed_gain;
             }
         }
     }

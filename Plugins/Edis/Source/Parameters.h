@@ -2,6 +2,17 @@
 
 #include <shared_plugin_helpers/shared_plugin_helpers.h>
 
+template <typename T>
+struct TimeParamRanges {
+  constexpr static auto start = T{0.0};
+  constexpr static auto end = T{100.0};
+  constexpr static auto interval = T{0.0};
+  constexpr static auto skew = T{0.1f};
+  constexpr static auto default_value = T{0.0};
+};
+
+using T = TimeParamRanges<float>;
+
 struct Parameters
 {
     void add(juce::AudioProcessor& processor) const
@@ -10,8 +21,12 @@ struct Parameters
         processor.addParameter(enable);
         processor.addParameter(attack);
         processor.addParameter(release);
-
     }
+//     AudioParameterFloat (const ParameterID& parameterID,
+//                          const String& parameterName,
+//                          NormalisableRange<float> normalisableRange,
+//                          float defaultValue,
+//                          const AudioParameterFloatAttributes& attributes = {});
 
     //Raw pointers. They will be owned by either the processor or the APVTS (if you use it)
     juce::AudioParameterFloat* amount =
@@ -21,8 +36,8 @@ struct Parameters
         new juce::AudioParameterBool({"Enable", 1}, "Enable", true);
 
     juce::AudioParameterFloat* attack =
-        new juce::AudioParameterFloat({"Attack", 1}, "Attack", 0.0f, 100.0f, 0.0f);
+        new juce::AudioParameterFloat({"Attack", 1}, "Attack", {T::start, T::end, T::interval, T::skew}, T::default_value);
 
     juce::AudioParameterFloat* release =
-        new juce::AudioParameterFloat({"Release", 1}, "Release", 0.0f, 100.0f, 0.0f);
+        new juce::AudioParameterFloat({"Release", 1}, "Release", {T::start, T::end, T::interval, T::skew}, T::default_value);
 };
