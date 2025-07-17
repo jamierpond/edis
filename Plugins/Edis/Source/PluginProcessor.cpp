@@ -7,10 +7,15 @@ constexpr auto abs = [](auto x) {
   return x < 0 ? -x : x;
 };
 
+template <typename T>
+constexpr static auto perform_one_pole(const T x, T alpha, const T prev_x) noexcept {
+  return ((T{1.0} - alpha) * x) + alpha * prev_x;
+}
+
 template<typename T>
-constexpr auto ring_mod_sidechain(T signal, T sidechain) {
+constexpr auto ring_mod_sidechain(T signal, T sidechain, T amount) {
   // whenever the sidechain value is large we want to attenuate the signal
-  auto gain = T{1.0} - pond::abs(sidechain);
+  auto gain = T{1.0} - (pond::abs(sidechain) * amount);
   return signal * gain;
 }
 
@@ -37,6 +42,8 @@ void EdisAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         auto mainInputOutput = getBusBuffer(buffer, true, 0);
         auto sideChainInput = getBusBuffer(buffer, true, 1);
 
+        auto amount = parameters.amount->get();
+
         if (sideChainInput.getNumChannels() < 1)
         {
             return;
@@ -49,7 +56,7 @@ void EdisAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
             for (int i = 0; i < mainInputOutput.getNumSamples(); ++i)
             {
-                channel[i] = pond::ring_mod_sidechain(channel[i], sidechain[i]);
+                channel[i] = pond::ring_mod_sidechain(channel[i], sidechain[i], amount);
             }
         }
     }
