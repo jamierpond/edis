@@ -123,6 +123,7 @@ void EdisAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                 .release_alpha = release_alpha
             });
 
+            channel[i] = y;
             prev_smoothed_gain[c_sz] = smoothed_gain;
         }
     }
