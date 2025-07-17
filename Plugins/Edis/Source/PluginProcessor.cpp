@@ -4,7 +4,7 @@
 namespace pond {
 
 
- /** Used to @ref performOnePoleFilter of a value.
+ /** Used to @ref perform_one_pole of a value.
 * \f[
 * \alpha = e^{\frac{-log(9)}{f_s \cdot T}}
 * \f]
