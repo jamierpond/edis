@@ -59,7 +59,7 @@ constexpr static auto rm_sidechain(const RingModArgs<T>& args) noexcept {
     auto [channel, sidechain, amount, prev_smooth, attack_alpha, release_alpha] = args;
     auto gain = pond::abs(sidechain) * amount;
 
-    auto rescaled_gain = 1.0f - pond::rescale(gain,-1.0f, 1.0f, 0.0f, 1.0f);
+    auto rescaled_gain = 1.0f - gain;
     auto is_attacking = rescaled_gain > prev_smooth;
     auto alpha = is_attacking ? attack_alpha : release_alpha;
     auto smoothed_gain = pond::perform_one_pole(rescaled_gain, alpha, prev_smooth);
