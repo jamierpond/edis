@@ -1,6 +1,7 @@
 *.user
 
 SDKs
+.opencode
 
 .cache
 

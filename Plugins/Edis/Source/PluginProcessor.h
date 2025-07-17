@@ -5,6 +5,8 @@
 class EdisAudioProcessor : public PluginHelpers::ProcessorBase
 {
 public:
+
+    //==============================================================================
     EdisAudioProcessor();
 
     void processBlock(juce::AudioBuffer<float>&, juce::MidiBuffer&) override;

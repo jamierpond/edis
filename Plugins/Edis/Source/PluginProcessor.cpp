@@ -1,7 +1,27 @@
 #include "PluginProcessor.h"
 #include "PluginEditor.h"
 
+namespace pond {
+
+constexpr auto abs = [](auto x) {
+  return x < 0 ? -x : x;
+};
+
+template<typename T>
+constexpr auto ring_mod_sidechain(T signal, T sidechain) {
+  // whenever the sidechain value is large we want to attenuate the signal
+  auto gain = T{1.0} - pond::abs(sidechain);
+  return signal * gain;
+}
+
+} // namespace pond
+
+
 EdisAudioProcessor::EdisAudioProcessor()
+    : ProcessorBase(BusesProperties()
+                          .withInput("Input", juce::AudioChannelSet::stereo(), true)
+                          .withInput("Sidechain", juce::AudioChannelSet::stereo(), true)
+                          .withOutput("Output", juce::AudioChannelSet::stereo(), true))
 {
     parameters.add(*this);
 }
@@ -13,9 +33,25 @@ void EdisAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     juce::ignoreUnused(midiMessages);
 
     if (parameters.enable->get())
-        buffer.applyGain(parameters.gain->get());
+    {
+        auto mainInputOutput = getBusBuffer(buffer, true, 0);
+        auto sideChainInput = getBusBuffer(buffer, true, 1);
+
+        for (int j = 0; j < mainInputOutput.getNumChannels(); ++j)
+        {
+            auto* channel = mainInputOutput.getWritePointer(j);
+            auto* sidechain = sideChainInput.getReadPointer(j);
+
+            for (int i = 0; i < mainInputOutput.getNumSamples(); ++i)
+            {
+                channel[i] = pond::ring_mod_sidechain(channel[i], sidechain[i]);
+            }
+        }
+    }
     else
+    {
         buffer.clear();
+    }
 }
 
 juce::AudioProcessorEditor* EdisAudioProcessor::createEditor()
