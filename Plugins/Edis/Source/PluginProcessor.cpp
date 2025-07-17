@@ -114,7 +114,7 @@ void EdisAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
 
             for (auto i = 0; i < mainInputOutput.getNumSamples(); ++i) {
 
-                auto [y, smoothed_gain] = pond::rm_sidechain<float>({
+                channel[i] = pond::rm_sidechain<float>({
                     .channel = channel[i],
                     .sidechain = sidechain[i],
                     .amount = amount,
@@ -123,7 +123,8 @@ void EdisAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                     .release_alpha = release_alpha
                 });
 
-                prev_smoothed_gain[c_sz] = smoothed_gain;
+                prev_smoothed_gain[c_sz] = channel[i].second;
+                channel[i] = channel[i].first;
             }
         }
     }
