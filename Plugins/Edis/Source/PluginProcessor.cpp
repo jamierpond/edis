@@ -26,8 +26,13 @@ constexpr static auto perform_one_pole(const T x, T alpha, const T prev_x) noexc
 }
 
 template <typename T>
+constexpr static auto is_approx (T x, T y, T epsilon = static_cast<T>(1e-6)) noexcept {
+  return pond::abs(x - y) < epsilon;
+}
+
+template <typename T>
 constexpr static auto rescale(T x, T old_min, T old_max, T new_min, T new_max) noexcept {
-  if (old_min == old_max) {
+  if (pond::is_approx(old_min, old_max)) {
     return new_min; // Avoid division by zero
   }
   return new_min + (x - old_min) * (new_max - new_min) / (old_max - old_min);
@@ -37,7 +42,6 @@ template <typename T, T OldMin, T OldMax, T NewMin, T NewMax>
 constexpr static auto rescale(T x) noexcept {
   return rescale(x, OldMin, OldMax, NewMin, NewMax);
 }
-
 
 
 } // namespace pond
