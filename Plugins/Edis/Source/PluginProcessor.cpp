@@ -89,16 +89,15 @@ void EdisAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
                 auto rescaled_gain = 1.0f - pond::rescale(gain,-1.0f, 1.0f, 0.0f, 1.0f);
 
                 // smoothing
-//                 const auto prev_smooth = prev_smoothed_gain[c_sz];
-//                 const auto is_attacking = nve_gain < prev_smooth;
-//                 const auto alpha = is_attacking ? attack_alpha : release_alpha;
-//                 const auto smoothed_gain = pond::perform_one_pole(nve_gain, alpha, prev_smooth);
+                const auto prev_smooth = prev_smoothed_gain[c_sz];
+                const auto is_attacking = rescaled_gain < prev_smooth;
+                const auto alpha = is_attacking ? attack_alpha : release_alpha;
+                const auto smoothed_gain = pond::perform_one_pole(rescaled_gain, alpha, prev_smooth);
 
-                auto ring_modded = channel[i] * rescaled_gain;
-                channel[i] += ring_modded;
+                channel[i] *= rescaled_gain; // smoothed_gain;
 
-                // re-save smoothed
-                // prev_smoothed_gain[c_sz] = smoothed_gain;
+               // re-save smoothed
+               prev_smoothed_gain[c_sz] = smoothed_gain;
             }
         }
     }
