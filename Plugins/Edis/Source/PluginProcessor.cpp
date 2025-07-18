@@ -70,7 +70,7 @@ EdisAudioProcessor::EdisAudioProcessor()
     parameters.add(*this);
 }
 
-void EdisAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
+void EdisAudioProcessor::processBlock(juce::AudioBuffer<float>& inputs,
                                                    juce::MidiBuffer& midiMessages)
 {
     juce::ignoreUnused(midiMessages);
@@ -79,8 +79,8 @@ void EdisAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
       return;
     }
 
-    auto mainInputOutput = getBusBuffer(buffer, true, 0);
-    auto sideChainInput = getBusBuffer(buffer, true, 1);
+    auto buffer = getBusBuffer(inputs, true, 0);
+    auto sidechain_buffer = getBusBuffer(inputs, true, 1);
 
     auto amount = parameters.amount->get();
 
@@ -88,24 +88,20 @@ void EdisAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
     auto attack_s = parameters.attack->get() * 1e-3f;
     auto release_s = parameters.release->get() * 1e-3f;
 
-    if (sideChainInput.getNumChannels() < 1) {
+    if (sidechain_buffer.getNumChannels() < 1) {
         return;
     }
 
      auto attack_alpha = pond::calculate_alpha_value(attack_s, fs);
      auto release_alpha = pond::calculate_alpha_value(release_s, fs);
 
-    for (auto c = 0; c < mainInputOutput.getNumChannels(); ++c) {
+    for (auto c = 0; c < buffer.getNumChannels(); ++c) {
         // for size_t
         auto c_sz = static_cast<size_t>(c);
-        auto* channel = mainInputOutput.getWritePointer(c);
-        auto* sidechain = sideChainInput.getReadPointer(c);
+        auto* channel = buffer.getWritePointer(c);
+        auto* sidechain = sidechain_buffer.getReadPointer(c);
 
-        for (auto i = 0; i < mainInputOutput.getNumSamples(); ++i) {
-            constexpr auto no_smoothing = [](const float x) noexcept {
-                return x;
-            };
-
+        for (auto i = 0; i < buffer.getNumSamples(); ++i) {
             auto prev_smooth = prev_smoothed_gain[c_sz];
             auto attack_release_smoothing_fn = [&prev_smooth, attack_alpha, release_alpha](auto x) noexcept {
                 return pond::attack_release_smoothing(x, prev_smooth, attack_alpha, release_alpha);
