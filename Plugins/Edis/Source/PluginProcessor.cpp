@@ -26,46 +26,35 @@ constexpr static auto perform_one_pole(const T x, T alpha, const T prev_x) noexc
 }
 
 template <typename T>
-constexpr static auto is_approx (T x, T y, T epsilon = static_cast<T>(1e-6)) noexcept {
-  return pond::abs(x - y) < epsilon;
-}
-
-template <typename T>
-constexpr static auto rescale(T x, T old_min, T old_max, T new_min, T new_max) noexcept {
-  if (pond::is_approx(old_min, old_max)) {
-    return new_min; // Avoid division by zero
-  }
-  return new_min + (x - old_min) * (new_max - new_min) / (old_max - old_min);
-}
-
-template <typename T, T OldMin, T OldMax, T NewMin, T NewMax>
-constexpr static auto rescale(T x) noexcept {
-  return rescale(x, OldMin, OldMax, NewMin, NewMax);
-}
-
-
-template <typename T>
 struct RingModArgs {
   T channel;
   T sidechain;
   T amount;
-  T prev_smooth;
-  T attack_alpha;
-  T release_alpha;
+//   T prev_smooth;
+//   T attack_alpha;
+//   T release_alpha;
 };
 
 template <typename T>
-constexpr static auto rm_sidechain(const RingModArgs<T>& args) noexcept {
-    auto [channel, sidechain, amount, prev_smooth, attack_alpha, release_alpha] = args;
-    auto gain = pond::abs(sidechain) * amount;
-
-    auto rescaled_gain = 1.0f - gain;
-    auto is_attacking = rescaled_gain > prev_smooth;
-    auto alpha = is_attacking ? attack_alpha : release_alpha;
-    auto smoothed_gain = pond::perform_one_pole(rescaled_gain, alpha, prev_smooth);
-
-    return smoothed_gain;
+constexpr static auto attack_release_smoothing(
+    const T x,
+    T& prev_smooth,
+    const T attack_alpha,
+    const T release_alpha) noexcept {
+  auto is_attacking = x > prev_smooth;
+  auto alpha = is_attacking ? attack_alpha : release_alpha;
+  auto smoothed_gain = pond::perform_one_pole(x, alpha, prev_smooth);
+  return smoothed_gain;
 }
+
+template <typename T>
+constexpr static auto rm_sidechain = [](const RingModArgs<T>& args, auto&& gain_filter_fn) noexcept {
+    auto [channel, sidechain, amount] = args;
+    auto gain = pond::abs(sidechain) * amount;
+    auto rescaled_gain = 1.0f - gain;
+    auto smoothed_gain = gain_filter_fn(rescaled_gain);
+    return smoothed_gain;
+};
 
 
 
@@ -113,15 +102,20 @@ void EdisAudioProcessor::processBlock(juce::AudioBuffer<float>& buffer,
         auto* sidechain = sideChainInput.getReadPointer(c);
 
         for (auto i = 0; i < mainInputOutput.getNumSamples(); ++i) {
+            constexpr auto no_smoothing = [](const float x) noexcept {
+                return x;
+            };
+
+            auto prev_smooth = prev_smoothed_gain[c_sz];
+            auto attack_release_smoothing_fn = [&prev_smooth, attack_alpha, release_alpha](auto x) noexcept {
+                return pond::attack_release_smoothing(x, prev_smooth, attack_alpha, release_alpha);
+            };
 
             auto gain = pond::rm_sidechain<float>({
                 .channel = channel[i],
                 .sidechain = sidechain[i],
                 .amount = amount,
-                .prev_smooth = prev_smoothed_gain[c_sz],
-                .attack_alpha = attack_alpha,
-                .release_alpha = release_alpha
-            });
+            }, attack_release_smoothing_fn);
 
             channel[i] *= gain;
             prev_smoothed_gain[c_sz] = gain;
