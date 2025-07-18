@@ -27,7 +27,7 @@ constexpr static auto perform_one_pole(const T x, T alpha, const T prev_x) noexc
 
 template <typename T>
 struct RingModArgs {
-  T channel;
+  T input;
   T sidechain;
   T amount;
 //   T prev_smooth;
@@ -108,7 +108,7 @@ void EdisAudioProcessor::processBlock(juce::AudioBuffer<float>& inputs,
             };
 
             auto gain = pond::rm_sidechain<float>({
-                .channel = channel[i],
+                .input = channel[i],
                 .sidechain = sidechain[i],
                 .amount = amount,
             }, attack_release_smoothing_fn);
