@@ -103,6 +103,9 @@ void EdisAudioProcessor::processBlock(juce::AudioBuffer<float>& inputs,
 
         for (auto i = 0; i < buffer.getNumSamples(); ++i) {
             auto prev_smooth = prev_smoothed_gain[c_sz];
+
+            // you could bypass with no-op function, and should all compile away.
+            // you could also add a fancy IIR filter or smth!
             auto attack_release_smoothing_fn = [&prev_smooth, attack_alpha, release_alpha](auto x) noexcept {
                 return pond::attack_release_smoothing(x, prev_smooth, attack_alpha, release_alpha);
             };
